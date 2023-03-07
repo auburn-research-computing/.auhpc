@@ -1,0 +1,7 @@
+CC=/tools/gcc-8.4.0/bin/gcc
+CXX=/tools/gcc-8.4.0/bin/g++
+FC=/tools/gcc-8.4.0/bin/gfortran
+F77=/tools/gcc-8.4.0/bin/gfortran
+PKG_CFLAGS+=-O3
+PKG_CFLAGS+=-O3
+
