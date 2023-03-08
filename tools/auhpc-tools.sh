@@ -1,57 +1,102 @@
 #!/bin/bash
 
+#  auhpc-tools by the Auburn HPC Admins
+#  auhpc-tools.sh | 03.01.23
+#  ---------------------------------------------------------
+#  https://github.com/auburn-research-computing/.auhpc
+#  ---------------------------------------------------------
+#  outer logic, setup script for performing required 
+#  initialization  filesystem, and user setup operations
+#  ---------------------------------------------------------
+
+# script should be sourced, not executed directly
 [[ "$0" == "${BASH_SOURCE}" ]] && { echo -e "usage: [.|source] ${0}\n\n"; exit; }
 
+# attempt to determine full path to this script
 SCRIPT=$(readlink -f ${BASH_SOURCE[0]})
 
+# user input handler, TODO: integrate with scripting tools
 function confirm() {
     local msg="${1}"; local fatal="${2}"; [[ -z ${fatal} ]] && fatal=1
     printf "\n"; read -p "$(echo -e ${msg}) (y\N)? " response
     local response=${response,,}
     if [[ ! $response =~ ^(yes|y) ]]; then
         if (( fatal == 1 )); then 
-        printf "\nscript progress cancelled. exiting.\n\n"; exit 1; else
+        printf "\nscript progress cancelled. exiting.\n\n"; return 1; else
         printf "\noperation cancelled. skipping.\n"; return 1; fi
     fi
-    printf "\n"
+    #printf "\n"
 }
+
+# configuration profiles contain some subset of variables, filesystem locations, 
+# or functions  for specific software workflows, see README 
+
+# from a provided profile name or filename, determine associated
+# configuration files, import associated variables, and search known global arrays 
+# for associated load-time functions to be called
+
+# usage: read_profile <name|path>
 
 function read_profile() {
 	
+	# must provide a profile name or filename
 	[[ ${#} -ne 1 ]] || [[ -z ${1} ]] && { echo -e "usage: ${FUNCNAME[0]} <profile_name>"; return 1; }
 	
-	local name="${1}"; 
+	local name="${1}"
+
+	# if the provided \"name\" is a valid file path, import it directly, otherwise append $name to the defined
+	# profile subdirectory and import all *.cfg files
 	local profile="${SCRIPT_PROFILES}/${name}/*.cfg"; [[ -f ${name} ]] && { local profile="${name}"; name="script"; }
 	
-	echo -ne "loading ${profile} ... " 
+	echo -ne "loading ${name} configuration profile ... " 
 
+	# source the determined file(s) to import variables
 	source ${profile} 2>/dev/null && echo -e "OK" || { echo -e "FAIL"; return 1; }
 
+	# locate any associated load-time functions and execute
+	for i in $(seq 1 2 ${#PROFILE_OUT[@]}); do
+    	key=$(echo ${PROFILE_OUT[${i}-1]})
+		[[ "${key}" =~ ${name}$ ]] && ${PROFILE_OUT[${i}]} 2>/dev/null && return 0
+	done
+
 	return 0
-	
+
 }
+
+# load the script profile, which attempts to determine essential filesystem locations
+# and other metadata required for subsequent operations
+
+# usage: script-init
 
 script-init() {
 	
+	# check that SCRIPT, defined above, references a valid file
 	[[ -z ${SCRIPT} ]] || [[ ! -f ${SCRIPT} ]] && { echo -e "invalid script identifer, check SCRIPT in source\n"; return 1; }
 
+	# title
 	echo -e "\n$(echo ${SCRIPT:-automation} | rev | cut -d'/' -f1 | rev) :: script intialization\n" 
+
+	echo -ne "locating script configuration profile ... "	
 	
+	# we have not yet sourced the core profile, so  
 	local prefix=$(echo ${SCRIPT} | grep -oE "^.*/[^.*$]*")
 	local config="${prefix}.cfg"
 
-	[[ -z ${config} ]] || [[ ! -f ${config} ]] && { echo "unable to locate core settings for ${SCRIPT}"; return 1; }
+	[[ -z ${config} ]] || [[ ! -f ${config} ]] && { echo "unable to locate core settings for ${SCRIPT}"; return 1; } || echo ${config} | awk -F'/' '{printf "OK (%s)\n",$NF}'
 
 	read_profile ${config}
 
-	(( ! ${?} == 0 )) && { echo -e echo "unable to read ${config}" >&2; return 1; }
+	(( ! ${?} == 0 )) && { echo -e echo "unable to read ${config}, try \"source ${config}\" to debug." >&2; return 1; }
 
 	if [[ -z ${SCRIPT_PROFILE} ]]; then
-		echo -e "no profile directive found. set SCRIPT_PROFILE in ${config} to set the base environment"
+		echo -e "no environment profile found. using existing system environment settings."
+		echo -e "if a  SCRIPT_PROFILE in ${config} to set the base environment"
 		return 1
 	fi
 
 	confirm "initialize ${SCRIPT_PROFILE} profile" && script-profile-init
+
+	echo -e "\nscript initialization complete. done.\n\n"
 
 	return 0
 
@@ -73,6 +118,8 @@ script-profile-init() {
 
 	confirm "initialize runtime" && script-runtime-init
 	
+	echo -e "\nscript runtime environment initialization complete"
+
 	return 0
 
 }
@@ -115,8 +162,10 @@ function script-toolchain-init() {
 	fi
 	
     local compiler="${2}"; [[ -z ${compiler} ]] && local compiler=${BASE_COMPILER}/${BASE_COMPILER_VERSION}
-        
-	echo -ne "\nloading ${compiler} toolchain module(s) ... " 2>&1
+    
+	confirm "load ${compiler} environment modules"; (( ! ${?} == 0 )) && return 1
+
+	echo -ne "loading ${compiler} toolchain module(s) ... " 2>&1
 
     module load ${compiler} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; }
 
@@ -133,6 +182,8 @@ function script-runtime-profile-init() {
 		echo -e "usage: ${FUNCNAME[0]} [software version] [runtime module]\nex. ${FUNCNAME[0]} R/2.2.1\n" >&2 
 		return 0
 	fi
+
+	confirm "load ${RUNTIME_MODULE}/${RUNTIME_VERSION} (${BASE_COMPILER}/${BASE_COMPILER_VERSION}) environment modules"; (( ! ${?} == 0 )) && return 1
         
 	echo -ne "\nloading ${RUNTIME_MODULE}/${RUNTIME_VERSION} module(s) ... " 2>&1
     
@@ -177,7 +228,7 @@ function profile-enable() {
 		echo -e "\nprofile activation failed\n" >&2; return 1
 	fi
 
-	[[ -L ${profile} ]] && echo "${BASE_RUNTIME} profile activated (${RUNTIME_CONFIG_NAME} -> ${RUNTIME_CONFIG_PROFILE})"
+	[[ -L ${profile} ]] && echo "\n${BASE_RUNTIME} profile activated (${RUNTIME_CONFIG_NAME} -> ${RUNTIME_CONFIG_PROFILE})"
 
 	return 0 
 
