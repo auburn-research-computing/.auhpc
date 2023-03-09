@@ -49,10 +49,11 @@ function read_profile() {
 	local profile="${SCRIPT_PROFILES}/${name}/*.cfg"; [[ -f ${name} ]] && { local profile="${name}"; name="script"; }
 	
 	echo -ne "loading ${name} configuration profile ... " 
-
 	# source the determined file(s) to import variables
 	source ${profile} 2>/dev/null && echo -e "OK" || { echo -e "FAIL"; return 1; }
 
+	echo -e "\n--- ${PROFILE_CONTEXT} :: ${PROFILE_SHORT} ---\n"
+	
 	# locate any associated load-time functions and execute
 	for i in $(seq 1 2 ${#PROFILE_OUT[@]}); do
     	key=$(echo ${PROFILE_OUT[${i}-1]})
@@ -72,17 +73,13 @@ script-init() {
 	
 	# check that SCRIPT, defined above, references a valid file
 	[[ -z ${SCRIPT} ]] || [[ ! -f ${SCRIPT} ]] && { echo -e "invalid script identifer, check SCRIPT in source\n"; return 1; }
-
-	# title
-	echo -e "\n$(echo ${SCRIPT:-automation} | rev | cut -d'/' -f1 | rev) :: script intialization\n" 
-
-	echo -ne "locating script configuration profile ... "	
-	
-	# we have not yet sourced the core profile, so  
+	 
 	local prefix=$(echo ${SCRIPT} | grep -oE "^.*/[^.*$]*")
 	local config="${prefix}.cfg"
 
-	[[ -z ${config} ]] || [[ ! -f ${config} ]] && { echo "unable to locate core settings for ${SCRIPT}"; return 1; } || echo ${config} | awk -F'/' '{printf "OK (%s)\n",$NF}'
+	echo -ne "locating script configuration profile ... "	
+
+	[[ -z ${config} ]] || [[ ! -f ${config} ]] && { echo "FAIL"; return 1; } || echo ${config} | awk -F'/' '{printf "OK (%s)\n",$NF}'
 
 	read_profile ${config}
 
@@ -90,13 +87,14 @@ script-init() {
 
 	if [[ -z ${SCRIPT_PROFILE} ]]; then
 		echo -e "no environment profile found. using existing system environment settings."
-		echo -e "if a  SCRIPT_PROFILE in ${config} to set the base environment"
+		echo -e "if a SCRIPT_PROFILE in ${config} to set the base environment"
 		return 1
 	fi
 
-	confirm "initialize ${SCRIPT_PROFILE} profile" && script-profile-init
-
-	echo -e "\nscript initialization complete. done.\n\n"
+	echo -e "\nselected profile(s): ${SCRIPT_BASE_PROFILE}"
+	confirm "load ${SCRIPT_PROFILE} environment profile" && script-profile-init && \
+	echo -e "\nscript initialization complete. done.\n\n" || { \
+	echo -e "\nscript initialization failed, incomplete setup.\n\n"; return 1; }
 
 	return 0
 
@@ -105,7 +103,7 @@ script-init() {
 script-profile-init() {
 
 	[[ -z ${SCRIPT_PROFILE} ]] && { echo "invalid script profile identifer"; return 1; }
-
+	
 	read_profile ${SCRIPT_PROFILE}
 
 	if [[ -z ${BASE_COMPILER} ]] || [[ -z ${BASE_COMPILER_VERSION} ]]; then
@@ -116,9 +114,9 @@ script-profile-init() {
 		echo "invalid runtime, check ${SCRIPT_PROFILE}"; return 1
 	fi
 
-	confirm "initialize runtime" && script-runtime-init
-	
-	echo -e "\nscript runtime environment initialization complete"
+	confirm "load ${BASE_RUNTIME} runtime profile " && script-runtime-init && \
+	echo -e "\nscript runtime environment initialization complete" || { \
+	echo -e "\nscript runtime environment initialization failed, incomplete setup.\n\n"; return 1; }
 
 	return 0
 
@@ -133,28 +131,31 @@ script-runtime-init() {
 		(( ${?} == 0 )) && script-profile-init || { echo -e "no profile available, check settings"; return 1; }
 	fi
 
-	script-toolchain-init
+	script-toolchain-init && echo -e "\nbase environment switched to ${BASE_COMPILER} ${BASE_COMPILER_VERSION}\n\n--- end :: base environment modifications ---\n" || { \
+	echo -e "error: ${compiler} environment modifications failed or incomplete\n"; return 1; }
 
 	if [[ -z ${BASE_RUNTIME} ]] || [[ -z ${BASE_RUNTIME_PROFILE} ]]; then
 		confirm "no runtime profile settings found in ${SCRIPT_PROFILE}"
 		(( ${?} == 0 )) && script-profile-init || { echo -e "no profile available, check settings"; return 1; }
 	fi
 	
-	script-runtime-profile-init
+	script-runtime-profile-init && echo -e "\n${BASE_RUNTIME} runtime environment switched to ${RUNTIME_MODULE}/${RUNTIME_VERSION}\n\n--- end :: software\\\\runtime environment modifications ---\n" || { \
+	echo -e "error: ${RUNTIME_MODULE}/${RUNTIME_VERSION} environment modification failed or incomplete\n"; return 1; }
 
 	for i in $(seq 1 2 ${#RUNTIME_FUNCTIONS[@]}); do
     	key=$(echo ${RUNTIME_FUNCTIONS[${i}-1]})
 		[[ "${key}" == "${BASE_RUNTIME}" ]] && ${RUNTIME_FUNCTIONS[${i}]} 2>/dev/null
 	done
 
-	profile-enable
-
-	return 0
+	profile-enable && echo -e "${RUNTIME_CONFIG_PROFILE} activated for the ${RUNTIME_MODULE} runtime" || { \
+	echo -e "${RUNTIME_CONFIG_NAME} activation failed, check ${RUNTIME_CONFIG_PROFILE}\n"; return 1; }
 
 }
 
 function script-toolchain-init() {
 
+	echo -e "\n--- begin :: base environment modifications ---"
+	
 	if [[ "${@:1}" =~ ^(.*-)+(help|\?)$ ]]; then
 		echo -e "${FUNCNAME[0]}: load a default or optionally specified compiler module and dependent R version."
 		echo -e "usage: ${FUNCNAME[0]} [r_version] [compiler module]\nex. ${FUNCNAME[0]} 4.2.2 gcc/8.4.0\n\n" >&2 
@@ -174,7 +175,7 @@ function script-toolchain-init() {
 }
 
 function script-runtime-profile-init() {
-
+	
 	read_profile ${BASE_RUNTIME}
 
 	if [[ "${@:1}" =~ ^(.*-)+(help|\?)$ ]]; then
@@ -182,6 +183,8 @@ function script-runtime-profile-init() {
 		echo -e "usage: ${FUNCNAME[0]} [software version] [runtime module]\nex. ${FUNCNAME[0]} R/2.2.1\n" >&2 
 		return 0
 	fi
+
+	echo -e "\n--- begin :: software\\\\runtime environment modifications ---" 
 
 	confirm "load ${RUNTIME_MODULE}/${RUNTIME_VERSION} (${BASE_COMPILER}/${BASE_COMPILER_VERSION}) environment modules"; (( ! ${?} == 0 )) && return 1
         
@@ -228,7 +231,7 @@ function profile-enable() {
 		echo -e "\nprofile activation failed\n" >&2; return 1
 	fi
 
-	[[ -L ${profile} ]] && echo "\n${BASE_RUNTIME} profile activated (${RUNTIME_CONFIG_NAME} -> ${RUNTIME_CONFIG_PROFILE})"
+	[[ -L ${profile} ]] && echo -e "\n\n${BASE_RUNTIME} profile activated (${RUNTIME_CONFIG_NAME} -> ${RUNTIME_CONFIG_PROFILE})"
 
 	return 0 
 
