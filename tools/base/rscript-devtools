@@ -1,0 +1,11 @@
+#!/usr/bin/env r
+#
+#  R setup script | 03.01.23
+#  for use with auhpc-tools by the Auburn HPC Admins
+#  ---------------------------------------------------------
+#  https://github.com/auburn-research-computing/.auhpc
+#  ---------------------------------------------------------
+
+# add operations as needed
+
+install.packages('devtools')

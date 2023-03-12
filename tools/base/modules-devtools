@@ -1,0 +1,11 @@
+pixman/0.38.4
+libpng/1.2.59
+libtiff/4.5.0
+libjpeg/2.1.2
+glib/2.63.6
+fontconfig/2.13.93
+freetype/2.13.0 
+cairo/1.16.0
+fribidi/1.0.10
+harfbuzz/5.3.1
+mpfr/4.1.0
