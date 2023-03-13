@@ -62,13 +62,12 @@ echo -ne "build configuration: ${source_devs} ... "
 echo -ne "${target_runtime} profile: ${source_profiles} ... "
 [[ -d ${source_profiles} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_profiles} ... "; mkdir -p ${source_profiles} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
-echo -ne "${target_runtime} virtual library path: ${source_libs} ... "
+echo -ne "${{target_runtime}} virtual library path: ${source_libs} ... "
 [[ -d ${source_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_libs} ... "; mkdir -p ${source_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -e "\n------ target paths :: canonical ${target_runtime} configuration paths ------\n"
 echo -ne "library path: ${target_libs} ... "
 [[ -d ${target_trunk_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_trunk_libs} ... "; mkdir -p ${target_trunk_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
-[[ -d ${source_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_libs} ... "; mkdir -p ${source_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 [[ -L ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "linking ${target_libs} ... "; target-enable ${source_libs} ${target_libs} && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -ne "build & user environment: ${target_trunk_dev} ... "
