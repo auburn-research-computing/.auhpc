@@ -29,10 +29,6 @@ config="${prefix}/${name}.cfg"
 
 source "${config}"
 
-# set base environment
-module load ${target_compiler}/${target_compiler_version}
-module load ${target_runtime}/${target_runtime_version}
-
 source_prefix="${target_runtime_version}/${target_compiler}/${target_compiler_version}"
 source_libs="${source_trunk_lib}/${source_prefix}"
 source_devs="${source_trunk_dev}/${source_prefix}"
@@ -54,6 +50,11 @@ read -n1 -p "switch to this ${target_runtime} environment (y/N)? " response
 
 [[ ! "${response}" =~ (Y|y) ]] && { echo -e "\n\n${name} cancelled. exiting.\n\n"; return 0; }
 
+# set base environment
+
+module load ${target_compiler}/${target_compiler_version}
+module load ${target_runtime}/${target_runtime_version}
+
 echo -e "\n\n------ source paths :: script-generated configuration data directories ------\n"
 echo -ne "build configuration: ${source_devs} ... "
 [[ -d ${source_devs} ]]  && echo "OK" || { echo "NEW"; "creating new ${source_devs} ... "; mkdir -p ${source_devs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
@@ -66,7 +67,7 @@ echo -ne "library path: ${target_libs} ... "
 [[ -d ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_libs} ... "; mkdir -p ${target_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -ne "build & user environment: ${target_trunk_dev} ... "
-[[ -d ${target_trunk_dev} ]]  && echo "OK" || { echo "NEW"; "creating new ${target_trunk_dev} ... "; mkdir -p ${target_trunk_dev} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
+[[ -d ${target_trunk_dev} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_trunk_dev} ... "; mkdir -p ${target_trunk_dev} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
 
 echo -e "\n------ source data :: script generated configuration files ------\n"
 echo -e "data item 1: ${source_item_profile}"
@@ -85,8 +86,8 @@ sed -i "s|AUHPC_R_GOODBYE|${goodbye}|g" ${source_profile} 2>/dev/null || result=
 
 echo "${result}"
 echo -ne "- activating ${source_item_profile} ... "
-target-enable ${source_profile} ${target_profile} && 
-export R_LIBS_USER=${target_profile} && echo -e "OK" || echo "FAIL"
+
+target-enable ${source_profile} ${target_profile} && export R_LIBS_USER=${target_profile} && echo -e "OK" || echo "FAIL"
 
 echo -e "\ndata item 2: ${source_item_dev}\n"
 echo -ne "- staging ${source_item_dev} template ... "
