@@ -35,7 +35,7 @@ source_devs="${source_trunk_dev}/${source_prefix}"
 source_profiles="${source_trunk_profile}/${source_prefix}"
 source_dev="${source_devs}/${source_item_dev}"
 source_profile="${source_profiles}/${source_item_profile}"
-target_libs="${target_trunk_libs}/${target_runtime_version}/${target_compiler}/${target_compiler_version}"
+target_libs="${target_trunk_libs}/current"
 
 echo -e "\nAUHPC :: automation tools :: ${target_runtime} :: ${name}\n"
 echo -e "loading configuration from: ${config}\n"
@@ -62,9 +62,14 @@ echo -ne "build configuration: ${source_devs} ... "
 echo -ne "${target_runtime} profile: ${source_profiles} ... "
 [[ -d ${source_profiles} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_profiles} ... "; mkdir -p ${source_profiles} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
+echo -ne "${target_runtime} virtual library path: ${source_libs} ... "
+[[ -d ${source_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_libs} ... "; mkdir -p ${source_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
+
 echo -e "\n------ target paths :: canonical ${target_runtime} configuration paths ------\n"
 echo -ne "library path: ${target_libs} ... "
-[[ -d ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_libs} ... "; mkdir -p ${target_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
+[[ -d ${target_trunk_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_trunk_libs} ... "; mkdir -p ${target_trunk_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
+[[ -d ${source_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_libs} ... "; mkdir -p ${source_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
+[[ -L ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "linking ${target_libs} ... "; target-enable ${source_libs} ${target_libs} && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -ne "build & user environment: ${target_trunk_dev} ... "
 [[ -d ${target_trunk_dev} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_trunk_dev} ... "; mkdir -p ${target_trunk_dev} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
@@ -81,7 +86,7 @@ welcome="Welcome, ${USER}: ${target_runtime}${target_runtime_version} (${target_
 goodbye="Goodbye, ${USER}: ${target_runtime}${target_runtime_version} (${target_compiler}/${target_compiler_version})"
 
 sed -i "s|AUHPC_R_WELCOME|${welcome}|g" ${source_profile} 2>/dev/null || result="FAIL"
-sed -i "s|AUHPC_R_LIBPATHS|\'${source_libs}\'|g" ${source_profile} 2>/dev/null || result="FAIL"
+sed -i "s|AUHPC_R_LIBPATHS|\'${target_libs}\'|g" ${source_profile} 2>/dev/null || result="FAIL"
 sed -i "s|AUHPC_R_GOODBYE|${goodbye}|g" ${source_profile} 2>/dev/null || result="FAIL"
 
 echo "${result}"
