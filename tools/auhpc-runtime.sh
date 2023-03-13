@@ -8,26 +8,16 @@
 #  automate runtime configuration and environment
 #  ---------------------------------------------------------
 
-#### begin runtime options ####
-
-# modify to target a specific build and runtime environment
-
-target_compiler="gcc"
-target_compiler_version="8.4.0"
-target_runtime="R"
-target_runtime_version="4.2.2"
-target_runtime_feature="devtools"
-
-#### end runtime options ####
-
 [[ "$0" == "${BASH_SOURCE}" ]] && { echo -e "usage: [.|source] ${0}\n\n"; exit; }
 
 script=$(readlink -f ${BASH_SOURCE[0]})
 prefix=$(dirname ${script})
 name=$(echo ${script} | awk -F'/' '{print $NF}' | cut -d'.' -f1)
 config="${prefix}/${name}.cfg"
+library="${prefix}/${name}-lib.sh"
 
 source "${config}"
+source "${library}"
 
 source_prefix="${target_runtime_version}/${target_compiler}/${target_compiler_version}"
 source_libs="${source_trunk_lib}/${source_prefix}"
@@ -38,7 +28,8 @@ source_profile="${source_profiles}/${source_item_profile}"
 target_libs="${target_trunk_libs}/current"
 
 echo -e "\nAUHPC :: automation tools :: ${target_runtime} :: ${name}\n"
-echo -e "loading configuration from: ${config}\n"
+echo -e "loading mutable configuration from: ${config}"
+echo -e "loading derived configuration from: ${library}\n"
 echo -e "--- environment settings ----\n"
 echo -e "build environment: ${target_compiler}/${target_compiler_version}"
 echo -e "runtime environment: ${target_runtime}/${target_runtime_version}"
@@ -62,12 +53,13 @@ echo -ne "build configuration: ${source_devs} ... "
 echo -ne "${target_runtime} profile: ${source_profiles} ... "
 [[ -d ${source_profiles} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_profiles} ... "; mkdir -p ${source_profiles} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
-echo -ne "${{target_runtime}} virtual library path: ${source_libs} ... "
+echo -ne "${target_runtime} virtual library path: ${source_libs} ... "
 [[ -d ${source_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_libs} ... "; mkdir -p ${source_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -e "\n------ target paths :: canonical ${target_runtime} configuration paths ------\n"
-echo -ne "library path: ${target_libs} ... "
+echo -ne "library path: ${target_trunk_libs} ... "
 [[ -d ${target_trunk_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_trunk_libs} ... "; mkdir -p ${target_trunk_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
+echo -ne "library link: ${target_libs} ... "
 [[ -L ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "linking ${target_libs} ... "; target-enable ${source_libs} ${target_libs} && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -ne "build & user environment: ${target_trunk_dev} ... "
