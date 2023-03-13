@@ -57,7 +57,7 @@ module load ${target_runtime}/${target_runtime_version}
 
 echo -e "\n\n------ source paths :: script-generated configuration data directories ------\n"
 echo -ne "build configuration: ${source_devs} ... "
-[[ -d ${source_devs} ]]  && echo "OK" || { echo "NEW"; "creating new ${source_devs} ... "; mkdir -p ${source_devs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
+[[ -d ${source_devs} ]]  && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_devs} ... "; mkdir -p ${source_devs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
 
 echo -ne "${target_runtime} profile: ${source_profiles} ... "
 [[ -d ${source_profiles} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_profiles} ... "; mkdir -p ${source_profiles} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
