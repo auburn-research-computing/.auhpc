@@ -56,17 +56,17 @@ read -n1 -p "switch to this ${target_runtime} environment (y/N)? " response
 
 echo -e "\n\n------ source paths :: script-generated configuration data directories ------\n"
 echo -ne "build configuration: ${source_devs} ... "
-[[ -d ${source_devs} ]]  && echo "OK" || { echo "NEW"; "creating new ${source_devs} ... "; mkdir -p ${source_devs} && echo "OK\n" || { echo "FAIL\n"; return 1; } } 
+[[ -d ${source_devs} ]]  && echo "OK" || { echo "NEW"; "creating new ${source_devs} ... "; mkdir -p ${source_devs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
 
 echo -ne "${target_runtime} profile: ${source_profiles} ... "
-[[ -d ${source_profiles} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_profiles} ... "; mkdir -p ${source_profiles} && echo "OK\n" || { echo "FAIL\n"; return 1; } }
+[[ -d ${source_profiles} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${source_profiles} ... "; mkdir -p ${source_profiles} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -e "\n------ target paths :: canonical ${target_runtime} configuration paths ------\n"
 echo -ne "library path: ${target_libs} ... "
-[[ -d ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_libs} ... "; mkdir -p ${target_libs} && echo "OK\n" || { echo "FAIL\n"; return 1; } }
+[[ -d ${target_libs} ]] && echo "OK" || { echo "NEW"; echo -ne "creating new ${target_libs} ... "; mkdir -p ${target_libs} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } }
 
 echo -ne "build & user environment: ${target_trunk_dev} ... "
-[[ -d ${target_trunk_dev} ]]  && echo "OK" || { echo "NEW"; "creating new ${target_trunk_dev} ... "; mkdir -p ${target_trunk_dev} && echo "OK\n" || { echo "FAIL\n"; return 1; } } 
+[[ -d ${target_trunk_dev} ]]  && echo "OK" || { echo "NEW"; "creating new ${target_trunk_dev} ... "; mkdir -p ${target_trunk_dev} &>/dev/null && echo "OK" || { echo "FAIL"; return 1; } } 
 
 echo -e "\n------ source data :: script generated configuration files ------\n"
 echo -e "data item 1: ${source_item_profile}"
